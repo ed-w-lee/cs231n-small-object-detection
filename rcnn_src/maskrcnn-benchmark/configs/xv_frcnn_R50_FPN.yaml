@@ -1,6 +1,6 @@
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHT: "/home/edwlee/project/maskrcnn-benchmark/pretrained_models/xv_test2.pth"
+  WEIGHT: "pretrained_models/xv_test2.pth"
   BACKBONE:
     CONV_BODY: "R-50-FPN"
   RESNETS:
