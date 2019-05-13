@@ -3,3 +3,4 @@ cocoapi/
 apex/
 xview_data/
 xview_raw/
+*.pyc
