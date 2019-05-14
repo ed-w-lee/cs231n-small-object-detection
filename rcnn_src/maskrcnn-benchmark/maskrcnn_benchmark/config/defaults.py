@@ -163,8 +163,8 @@ _C.MODEL.RPN.NMS_THRESH = 0.7
 _C.MODEL.RPN.MIN_SIZE = 0
 # Number of top scoring RPN proposals to keep after combining proposals from
 # all FPN levels
-_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 1000
-_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 1000
+_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
+_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
 # Apply the post NMS per batch (default) or per image during training
 # (default is True to be consistent with Detectron, see Issue #672)
 _C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = False
