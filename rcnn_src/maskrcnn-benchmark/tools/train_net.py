@@ -33,7 +33,7 @@ except ImportError:
     raise ImportError('Use APEX for multi-precision via apex.amp')
 
 
-def train(cfg, local_rank, distributed):
+def train(cfg, local_rank, distributed, force_load):
     model = build_detection_model(cfg)
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
@@ -60,7 +60,7 @@ def train(cfg, local_rank, distributed):
 
     save_to_disk = get_rank() == 0
     checkpointer = DetectronCheckpointer(
-        cfg, model, optimizer, scheduler, output_dir, save_to_disk
+        cfg, model, optimizer, scheduler, output_dir, save_to_disk, force=force_load
     )
     extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT)
     arguments.update(extra_checkpoint_data)
@@ -129,6 +129,8 @@ def main():
         help="path to config file",
         type=str,
     )
+    parser.add_argument("--force-load", action="store_true", 
+        help="load given model weights, ignoring checkpoints")
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument(
         "--skip-test",
@@ -176,7 +178,7 @@ def main():
         logger.info(config_str)
     logger.info("Running with config:\n{}".format(cfg))
 
-    model = train(cfg, args.local_rank, args.distributed)
+    model = train(cfg, args.local_rank, args.distributed, args.force_load)
 
     if not args.skip_test:
         run_test(cfg, model, args.distributed)

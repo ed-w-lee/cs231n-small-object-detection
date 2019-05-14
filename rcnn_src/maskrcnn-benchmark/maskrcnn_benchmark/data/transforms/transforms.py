@@ -67,8 +67,12 @@ class RandomHorizontalFlip(object):
 
     def __call__(self, image, target):
         if random.random() < self.prob:
-            image = F.hflip(image)
-            target = target.transpose(0)
+            if random.random() < self.prob:
+                image = F.hflip(image)
+                target = target.transpose(0)
+            else:
+                image = F.vflip(image)
+                target = target.transpose(1)
         return image, target
 
 

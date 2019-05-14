@@ -105,6 +105,18 @@ class DatasetCatalog(object):
             "img_dir": "cityscapes/images",
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_test.json"
         },
+        "xview_train_aug": {
+            "img_dir": "xview/train_aug",
+            "ann_file": "xview/annotations_aug/train.json",
+        },
+        "xview_val_aug": {
+            "img_dir": "xview/val_aug",
+            "ann_file": "xview/annotations_aug/val.json",
+        },
+        "xview_test_aug": {
+            "img_dir": "xview/test_aug",
+            "ann_file": "xview/annotations_aug/test.json",
+        },
         "xview_train_orig": {
             "img_dir": "xview/train_orig",
             "ann_file": "xview/annotations_orig/train.json",

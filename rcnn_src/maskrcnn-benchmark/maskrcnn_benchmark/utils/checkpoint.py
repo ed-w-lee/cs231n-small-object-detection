@@ -19,7 +19,7 @@ class Checkpointer(object):
         save_dir="",
         save_to_disk=None,
         logger=None,
-        ckpt_file="",
+        force=False,
     ):
         self.model = model
         self.optimizer = optimizer
@@ -29,7 +29,7 @@ class Checkpointer(object):
         if logger is None:
             logger = logging.getLogger(__name__)
         self.logger = logger
-        self.ckpt_file = ckpt_file
+        self.force = force
 
     def save(self, name, **kwargs):
         if not self.save_dir:
@@ -51,10 +51,8 @@ class Checkpointer(object):
         torch.save(data, save_file)
         self.tag_last_checkpoint(save_file)
 
-    def load(self, f=None):
-        if self.ckpt_file:
-            f = self.ckpt_file.strip()
-        elif self.has_checkpoint():
+    def load(self, f=None, load_opt=True, load_sched=True):
+        if self.force == False and self.has_checkpoint():
             # override argument with existing checkpoint
             f = self.get_checkpoint_file()
         if not f:
@@ -64,10 +62,10 @@ class Checkpointer(object):
         self.logger.info("Loading checkpoint from {}".format(f))
         checkpoint = self._load_file(f)
         self._load_model(checkpoint)
-        if "optimizer" in checkpoint and self.optimizer:
+        if load_opt and "optimizer" in checkpoint and self.optimizer:
             self.logger.info("Loading optimizer from {}".format(f))
             self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
-        if "scheduler" in checkpoint and self.scheduler:
+        if load_sched and "scheduler" in checkpoint and self.scheduler:
             self.logger.info("Loading scheduler from {}".format(f))
             self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
 
@@ -112,10 +110,10 @@ class DetectronCheckpointer(Checkpointer):
         save_dir="",
         save_to_disk=None,
         logger=None,
-        ckpt_file="",
+        force=False,
     ):
         super(DetectronCheckpointer, self).__init__(
-            model, optimizer, scheduler, save_dir, save_to_disk, logger, ckpt_file
+            model, optimizer, scheduler, save_dir, save_to_disk, logger, force
         )
         self.cfg = cfg.clone()
 

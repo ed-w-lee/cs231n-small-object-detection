@@ -79,7 +79,7 @@ def shuffle_images_and_boxes_classes(im,box,cls):
         k = k + 1
     return im[perm], out_b, out_c
 
-def output_img(im, c_box, c_cls, out_train_dir, fname, idx, image_id, ann_id_start, cat_list):
+def output_img(im, c_box, c_cls, out_train_dir, fname, idx, image_id, ann_id_start, cat_list, aug=False):
     img = Image.fromarray(im, 'RGB')
     out_file = "%s.jpg" % image_id
     img.save(os.path.join(out_train_dir, out_file))
@@ -88,6 +88,7 @@ def output_img(im, c_box, c_cls, out_train_dir, fname, idx, image_id, ann_id_sta
     img_dict['height'] = im.shape[0]
     img_dict['width'] = im.shape[1]
     img_dict['id'] = image_id
+    img_dict['is_aug'] = 1 if aug else 0
     annos = []
     for box,cls in zip(c_box, c_cls):
         if (box[2]-box[0] <= 2) or (box[3]-box[1] <= 2):
@@ -127,7 +128,7 @@ if __name__ == "__main__":
                     help="number to put into test. if -1, will place non-train/val into test")
     parser.add_argument("-s", "--suffix", type=str, default='t1',
                     help="Output suffix. Default suffix 't1' will output 'xview_train_t1/' and 'xview_test_t1/'")
-    parser.add_argument("-a","--augment", type=bool, default=False,
+    parser.add_argument("-a","--augment", action="store_true",
     				help="A boolean value whether or not to use augmentation")
     args = parser.parse_args()
 
@@ -207,6 +208,9 @@ if __name__ == "__main__":
         ind_chips = 0
 
         for f_ind, fname in enumerate(tqdm(fnames)):
+            if test_cutoff >= 0 and f_ind > test_cutoff:
+                break
+
             # Needs to be "X.tif", ie ("5.tif")
             name = fname.split("/")[-1]
             arr = wv.get_image(fname)
@@ -214,9 +218,6 @@ if __name__ == "__main__":
             im,box,classes_final = wv.chip_image(arr,coords[chips==name],classes[chips==name],it,
                                                  overlap=overlap)
             
-            if test_cutoff >= 0 and f_ind > test_cutoff:
-                break
-
             for idx, image in enumerate(im):
                 tot_box += len(box[idx])
                 if f_ind < train_cutoff:
@@ -225,6 +226,18 @@ if __name__ == "__main__":
                     train_ann['annotations'].extend(annos)
                     train_ann['images'].append(img_dict)
                     train_chips+=1
+
+                    if AUGMENT:
+                        degs = [10, 90, 180, 270]
+                        center = (int(image.shape[0]/2), int(image.shape[1]/2))
+                        for deg in degs:
+                            ind_chips += 1
+                            nimage, nbox = aug.rotate_image_and_boxes(image, deg, center, box[idx])
+                            img_dict, annos, ann_id = output_img(nimage, nbox, classes_final[idx],
+                                out_train_dir, fname, idx, ind_chips, ann_id, cat_list, aug=True)
+                            train_ann['annotations'].extend(annos)
+                            train_ann['images'].append(img_dict)
+                            train_chips += 1
                 elif f_ind < val_cutoff:
                     out_file = "%s.jpg" % ind_chips
                     img_dict, annos, ann_id = output_img(image, box[idx], classes_final[idx], 
@@ -239,7 +252,8 @@ if __name__ == "__main__":
                     test_ann['annotations'].extend(annos)
                     test_ann['images'].append(img_dict)
                     test_chips += 1
-     
+                else:
+                    break
                 ind_chips +=1
 #                 if AUGMENT:
 #                     for extra in range(3):

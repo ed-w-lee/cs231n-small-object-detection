@@ -34,6 +34,11 @@ def main():
         help="path to config file",
     )
     parser.add_argument(
+        "--checkpoint-file",
+        metavar="FILE",
+        help="path to checkpoint file to evaluate",
+    )
+    parser.add_argument(
         "--min-iter",
         default=0,
         type=int,
@@ -79,42 +84,37 @@ def main():
     amp_handle = amp.init(enabled=use_mixed_precision, verbose=cfg.AMP_VERBOSE)
 
     output_dir = cfg.OUTPUT_DIR
-    ckpt_results = {}
-    for ckpt_f in glob.glob(os.path.join(output_dir, "*.pth")):
-        ckpt_iter = int(ckpt_f.split('_')[1].split('.')[0])
-        if ckpt_iter < args.min_iter:
-            continue
-        checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir, ckpt_file=ckpt_f)
-        _ = checkpointer.load(cfg.MODEL.WEIGHT)
+    ckpt_f = args.checkpoint_file
+    ckpt_iter = ckpt_f.split('.')[0].split('_')[1]
+    checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir, force=True)
+    _ = checkpointer.load(ckpt_f)
 
-        iou_types = ("bbox",)
-        if cfg.MODEL.MASK_ON:
-            iou_types = iou_types + ("segm",)
-        if cfg.MODEL.KEYPOINT_ON:
-            iou_types = iou_types + ("keypoints",)
-        output_folders = [None] * len(cfg.DATASETS.TEST)
-        dataset_names = cfg.DATASETS.TEST
-        if cfg.OUTPUT_DIR:
-            for idx, dataset_name in enumerate(dataset_names):
-                output_folder = os.path.join(cfg.OUTPUT_DIR, "evaluation", str(ckpt_iter), dataset_name)
-                mkdir(output_folder)
-                output_folders[idx] = output_folder
-        data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
-        for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
-            results, coco_results = inference(
-                model,
-                data_loader_val,
-                dataset_name=dataset_name,
-                iou_types=iou_types,
-                box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
-                device=cfg.MODEL.DEVICE,
-                expected_results=cfg.TEST.EXPECTED_RESULTS,
-                expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
-                output_folder=output_folder,
-            )
-            synchronize()
-            ckpt_results[ckpt_iter] = results
-    ap_results = [(k,v['bbox']['AP']) for k,v in ckpt_results]
+    iou_types = ("bbox",)
+    if cfg.MODEL.MASK_ON:
+        iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
+    output_folders = [None] * len(cfg.DATASETS.TEST)
+    dataset_names = cfg.DATASETS.TEST
+    if cfg.OUTPUT_DIR:
+        for idx, dataset_name in enumerate(dataset_names):
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "evaluation", dataset_name, ckpt_iter)
+            mkdir(output_folder)
+            output_folders[idx] = output_folder
+    data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
+    for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
+        inference(
+            model,
+            data_loader_val,
+            dataset_name=dataset_name,
+            iou_types=iou_types,
+            box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
+            device=cfg.MODEL.DEVICE,
+            expected_results=cfg.TEST.EXPECTED_RESULTS,
+            expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+            output_folder=output_folder,
+        )
+        synchronize()
 
 if __name__ == "__main__":
     main()
