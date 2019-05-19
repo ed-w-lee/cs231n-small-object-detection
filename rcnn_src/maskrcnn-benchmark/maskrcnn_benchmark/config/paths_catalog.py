@@ -117,6 +117,10 @@ class DatasetCatalog(object):
             "img_dir": "xview/test_aug",
             "ann_file": "xview/annotations_aug/test.json",
         },
+        "xview_train_aug_sep": {
+            "img_dir": "xview/train_aug_sep",
+            "ann_file": "xview/annotations_aug_sep/train.json",
+        },
         "xview_train_orig": {
             "img_dir": "xview/train_orig",
             "ann_file": "xview/annotations_orig/train.json",
