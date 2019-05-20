@@ -167,7 +167,7 @@ _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
 # Apply the post NMS per batch (default) or per image during training
 # (default is True to be consistent with Detectron, see Issue #672)
-_C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = True
+_C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = False
 # Custom rpn head, empty to use default conv or separable conv
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 

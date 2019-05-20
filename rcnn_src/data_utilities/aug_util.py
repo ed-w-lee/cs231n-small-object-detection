@@ -16,8 +16,6 @@ limitations under the License.
 """
 
 import numpy as np
-from PIL import Image
-import tensorflow as tf
 from PIL import Image, ImageDraw
 import skimage.filters as filters
 
