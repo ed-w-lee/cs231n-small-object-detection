@@ -4,3 +4,5 @@ apex/
 xview_data/
 xview_raw/
 *.pyc
+xview-yolov3/weights/best.pt 
+

@@ -120,12 +120,15 @@ if __name__ == "__main__":
     parser.add_argument("json_filepath", help="Filepath to GEOJSON coordinate file")
     parser.add_argument("out_folder", help="folder for output")
     parser.add_argument("category_filepath", help="filepath for categories")
-    parser.add_argument("--num_train", type=int, default=594,
-                    help="number to put into train")
-    parser.add_argument("--num_val", type=int, default=126,
-                    help="number to put into val")
-    parser.add_argument("--num_test", type=int, default=-1,
-                    help="number to put into test. if -1, will place non-train/val into test")
+    # parser.add_argument("--num_train", type=int, default=594,
+    #                 help="number to put into train")
+    # parser.add_argument("--num_val", type=int, default=126,
+    #                 help="number to put into val")
+    # parser.add_argument("--num_test", type=int, default=-1,
+    #                 help="number to put into test. if -1, will place non-train/val into test")
+    parser.add_argument("--train-file", type=str)
+    parser.add_argument("--test-file", type=str)
+    parser.add_argument("--val-file", type=str)
     parser.add_argument("-s", "--suffix", type=str, default='t1',
                     help="Output suffix. Default suffix 't1' will output 'xview_train_t1/' and 'xview_test_t1/'")
     parser.add_argument("-a","--augment", action="store_true",
@@ -149,9 +152,22 @@ if __name__ == "__main__":
     train_chips = 0
     val_chips = 0
     test_chips = 0
-    train_cutoff = args.num_train
-    val_cutoff = args.num_train + args.num_val
-    test_cutoff = val_cutoff + args.num_test if args.num_test >= 0 else -1
+    # train_cutoff = args.num_train
+    # val_cutoff = args.num_train + args.num_val
+    # test_cutoff = val_cutoff + args.num_test if args.num_test >= 0 else -1
+    train_fs = set()
+    test_fs = set()
+    val_fs = set()
+    with open(args.train_file, 'r') as fin:
+        for l in fin:
+            train_fs.add(l.strip())
+    with open(args.test_file, 'r') as fin:
+        for l in fin:
+            test_fs.add(l.strip())
+    with open(args.val_file, 'r') as fin:
+        for l in fin:
+            val_fs.add(l.strip())
+
     categories = []
     cat_list = []
     with open(args.category_filepath, 'r') as fin:
@@ -208,11 +224,11 @@ if __name__ == "__main__":
         ind_chips = 0
 
         for f_ind, fname in enumerate(tqdm(fnames)):
-            if test_cutoff >= 0 and f_ind > test_cutoff:
-                break
+            # if test_cutoff >= 0 and f_ind > test_cutoff:
+            #     break
 
             # Needs to be "X.tif", ie ("5.tif")
-            name = fname.split("/")[-1]
+            name = os.path.basename(fname)
             arr = wv.get_image(fname)
 
             im,box,classes_final = wv.chip_image(arr,coords[chips==name],classes[chips==name],it,
@@ -220,7 +236,7 @@ if __name__ == "__main__":
             
             for idx, image in enumerate(im):
                 tot_box += len(box[idx])
-                if f_ind < train_cutoff:
+                if name in train_fs:
                     img_dict, annos, ann_id = output_img(image, box[idx], classes_final[idx], 
                         out_train_dir, fname, idx, ind_chips, ann_id, cat_list)
                     train_ann['annotations'].extend(annos)
@@ -238,14 +254,14 @@ if __name__ == "__main__":
                             train_ann['annotations'].extend(annos)
                             train_ann['images'].append(img_dict)
                             train_chips += 1
-                elif f_ind < val_cutoff:
+                elif name in val_fs:
                     out_file = "%s.jpg" % ind_chips
                     img_dict, annos, ann_id = output_img(image, box[idx], classes_final[idx], 
                         out_val_dir, fname, idx, ind_chips, ann_id, cat_list)
                     val_ann['annotations'].extend(annos)
                     val_ann['images'].append(img_dict)
                     val_chips += 1
-                elif test_cutoff < 0 or f_ind < test_cutoff:
+                elif name in test_fs:
                     out_file = "%s.jpg" % ind_chips
                     img_dict, annos, ann_id = output_img(image, box[idx], classes_final[idx], 
                         out_test_dir, fname, idx, ind_chips, ann_id, cat_list)
@@ -253,6 +269,7 @@ if __name__ == "__main__":
                     test_ann['images'].append(img_dict)
                     test_chips += 1
                 else:
+                    raise ValueError("should have all tifs {}".format(name))
                     break
                 ind_chips +=1
 #                 if AUGMENT:
