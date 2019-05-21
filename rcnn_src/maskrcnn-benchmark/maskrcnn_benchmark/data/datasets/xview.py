@@ -22,18 +22,11 @@ def has_valid_annotation(anno):
 
 class XViewDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
-        self, ann_file, root, remove_images_without_annotations, include_aug=True, transforms=None
+        self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         super(XViewDataset, self).__init__(root, ann_file)
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
-
-        if not include_aug:
-            ids = []
-            for img_id in self.ids:
-                if not self.coco.loadImgs(img_id)[0]['is_aug']:
-                    ids.append(img_id)
-            self.ids = ids
 
         # filter images without detection annotations
         if remove_images_without_annotations:
