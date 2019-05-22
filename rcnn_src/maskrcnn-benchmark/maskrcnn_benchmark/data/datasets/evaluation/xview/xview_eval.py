@@ -1,3 +1,4 @@
+
 # A modification version from chainercv repository.
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
 from __future__ import division
@@ -40,11 +41,16 @@ def do_xview_evaluation(dataset, predictions, output_folder,
             splits=dataset.get_splits(),
         )
         all_results.append(result)
-        result_str += "mAP: {:.4f}\n".format(result["map"]['all'])
+        result_str += "mAP: {:.4f}, mAR: {:.4f}\n".format(result["map"]['all'], result["map"]["all"])
         for split, mAP in result['map'].items():
             if split == 'all': 
                 continue
             result_str += "{}: {:.4f}\t".format(split, mAP)
+        result_str += '\n'
+        for split, mAR in result['mar'].items():
+            if split == 'all': 
+                continue
+            result_str += "{}: {:.4f}\t".format(split, mAR)
         result_str += '\n'
 
         for i, ap in enumerate(result["ap"]):
@@ -79,13 +85,21 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
     prec, rec = calc_detection_voc_prec_rec(
         pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh, area_range=area_range
     )
+    ar = np.empty(mlen)
+    for c in range(len(rec)):
+        ar[c] = rec[c][-1]
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
+    mlen = max(map(lambda l: max(l), splits.values()))+1
+    if mlen > len(ap):
+      ap = np.append(ap, np.zeros(mlen-len(ap)) + np.nan)
 
     split_aps = OrderedDict({'all': np.nanmean(ap)})
+    split_ars = OrderedDict({'all': np.nanmean(ar)})
     for split, cats in splits.items():
-        split_ap = ap[cats]
-        split_aps[split] = np.nanmean(split_ap)
-    return {'ap': ap, 'map': split_aps}
+        cats = [cat for cat in cats if cat < len(ap)]
+        split_aps[split] = np.nanmean(ap[cats])
+        split_ars[split] = np.nanmean(ar[cats])
+    return {'ap': ap, 'map': split_aps, 'ar': ar, 'mar': split_ars}
 
 def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5, area_range=None):
     """Calculate precision and recall based on evaluation code of PASCAL VOC.
