@@ -85,11 +85,11 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
     prec, rec = calc_detection_voc_prec_rec(
         pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh, area_range=area_range
     )
+    mlen = max(map(lambda l: max(l), splits.values()))+1
     ar = np.empty(mlen)
     for c in range(len(rec)):
         ar[c] = rec[c][-1]
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
-    mlen = max(map(lambda l: max(l), splits.values()))+1
     if mlen > len(ap):
       ap = np.append(ap, np.zeros(mlen-len(ap)) + np.nan)
 
