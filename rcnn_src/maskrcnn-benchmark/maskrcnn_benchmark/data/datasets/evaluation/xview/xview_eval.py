@@ -85,7 +85,7 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
         split_aps[split] = np.nanmean(split_ap)
     return {'ap': ap, 'map': split_aps}
 
-def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5, area_range=area_range):
+def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5, area_range=None):
     """Calculate precision and recall based on evaluation code of PASCAL VOC.
     This function calculates precision and recall of
     predicted bounding boxes obtained from a dataset which has :math:`N`
