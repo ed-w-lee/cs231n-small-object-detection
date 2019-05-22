@@ -5,12 +5,14 @@ from __future__ import division
 import os
 from collections import defaultdict, OrderedDict
 import numpy as np
+import logging
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
-def do_xview_evaluation(dataset, predictions, output_folder, logger, 
+def do_xview_evaluation(dataset, predictions, output_folder
         area_ranges=[None,(0,32**2),(32**2,96**2),(96**2,1e5**2)],
         area_labels=['area/all', 'area/small', 'area/medium', 'area/large']):
+    logger = logging.getLogger("maskrcnn_benchmark.inference")
     # TODO need to make the use_07_metric format available
     # for the user to choose
     pred_boxlists = []
