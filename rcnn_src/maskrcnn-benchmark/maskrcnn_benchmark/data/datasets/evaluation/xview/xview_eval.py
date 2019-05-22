@@ -1,3 +1,4 @@
+
 # A modification version from chainercv repository.
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
 from __future__ import division
@@ -80,9 +81,13 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
         pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh, area_range=area_range
     )
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
-
+    
+    mlen = max(map(lambda l: max(l), splits.values()))+1
+    if mlen > len(ap):
+      ap = np.append(ap, np.zeros(mlen-len(ap)) + np.nan)
     split_aps = OrderedDict({'all': np.nanmean(ap)})
     for split, cats in splits.items():
+        cats = [cat for cat in cats if cat < len(ap)]
         split_ap = ap[cats]
         split_aps[split] = np.nanmean(split_ap)
     return {'ap': ap, 'map': split_aps}
