@@ -10,7 +10,7 @@ from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
 def do_xview_evaluation(dataset, predictions, output_folder, logger, 
         area_ranges=[None,(0,32**2),(32**2,96**2),(96**2,1e5**2)],
-        area_labels=['area/all', 'area/small', 'area/medium', 'area/large'):
+        area_labels=['area/all', 'area/small', 'area/medium', 'area/large']):
     # TODO need to make the use_07_metric format available
     # for the user to choose
     pred_boxlists = []
