@@ -15,6 +15,7 @@ def load_dataset(path):
     with open(ANNOTATIONS_PATH) as f:
         data = json.load(f)
     dataset = []
+    counter = 0
     for i in trange(len(data['features'])):
         if data['features'][i]['properties']['bounds_imcoords'] != []:
             image = data['features'][i]['properties']['image_id']
@@ -25,8 +26,9 @@ def load_dataset(path):
             val = np.array([int(num) for num in data['features'][i]['properties']['bounds_imcoords'].split(",")])
             x = val[2]/width - val[0]/width
             y = val[3]/height - val[1]/height
-            if x * y > 0:
+            if x * y < 1024 and x * y > 0:
                 dataset.append([x, y])
+    print("Total small objects: " + str(len(dataset)))
     return np.array(dataset)
 
 
