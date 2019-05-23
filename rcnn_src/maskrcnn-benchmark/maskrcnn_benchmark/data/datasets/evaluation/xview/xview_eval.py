@@ -44,7 +44,7 @@ def do_xview_evaluation(dataset, predictions, output_folder,
         for split, mAP in result['map'].items():
             if split == 'all': 
                 continue
-            result_str += "mAP{}: {:.4f}\t".format(split, mAP)
+            result_str += "mAP/{}: {:.4f}\t".format(split, mAP)
         result_str += '\n'
         for split, mAR in result['mar'].items():
             if split == 'all': 
@@ -88,7 +88,6 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
     ar = np.full([mlen], np.nan)
     for c in range(len(rec)):
         if rec[c] is not None:
-            print(len(rec[c]))
             if len(rec[c]):
                 ar[c] = rec[c][-1]
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
