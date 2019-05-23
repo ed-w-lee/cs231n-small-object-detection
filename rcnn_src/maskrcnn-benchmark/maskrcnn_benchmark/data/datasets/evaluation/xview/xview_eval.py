@@ -1,4 +1,3 @@
-
 # A modification version from chainercv repository.
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
 from __future__ import division
@@ -45,12 +44,12 @@ def do_xview_evaluation(dataset, predictions, output_folder,
         for split, mAP in result['map'].items():
             if split == 'all': 
                 continue
-            result_str += "{}: {:.4f}\t".format(split, mAP)
+            result_str += "mAP{}: {:.4f}\t".format(split, mAP)
         result_str += '\n'
         for split, mAR in result['mar'].items():
             if split == 'all': 
                 continue
-            result_str += "{}: {:.4f}\t".format(split, mAR)
+            result_str += "mAR/{}: {:.4f}\t".format(split, mAR)
         result_str += '\n'
 
         for i, ap in enumerate(result["ap"]):
@@ -86,9 +85,12 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
         pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh, area_range=area_range
     )
     mlen = max(map(lambda l: max(l), splits.values()))+1
-    ar = np.empty(mlen)
+    ar = np.full([mlen], np.nan)
     for c in range(len(rec)):
-        ar[c] = rec[c][-1]
+        if rec[c] is not None:
+            print(len(rec[c]))
+            if len(rec[c]):
+                ar[c] = rec[c][-1]
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
     if mlen > len(ap):
       ap = np.append(ap, np.zeros(mlen-len(ap)) + np.nan)
