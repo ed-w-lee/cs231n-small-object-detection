@@ -170,7 +170,7 @@ def make_rpn_loss_evaluator(cfg, box_coder):
         )
         obj_loss['avg'] = True
     elif obj_loss_fn_type == "ReducedFocal":
-        obj_loss['fn'] = SigmoidFocalLoss(
+        obj_loss['fn'] = SigmoidReducedFocalLoss(
             cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
             cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
             cfg.MODEL.RPN.REDUCED_FOCAL_LOSS_CUTOFF,
@@ -179,7 +179,7 @@ def make_rpn_loss_evaluator(cfg, box_coder):
     elif obj_loss_fn_type == "AreaFocal":
         raise NotImplementedError("area focal loss not yet implemented")
     else:
-        raise ValueError("invalid objectness_loss_type: {}".format(objectness_loss_type))
+        raise ValueError("invalid objectness_loss_type: {}".format(obj_loss_fn_type))
 
     loss_evaluator = RPNLossComputation(
         matcher,

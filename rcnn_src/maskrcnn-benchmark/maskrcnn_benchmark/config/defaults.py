@@ -197,6 +197,12 @@ _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 _C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
 _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
+# RoI box head loss type 
+# check modeling/roi_heads/box_head/loss.py for options
+_C.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_FN = "CE"
+_C.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA = 0.25
+_C.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA = 2.0
+_C.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF = 0.5
 
 # Only used on test mode
 
