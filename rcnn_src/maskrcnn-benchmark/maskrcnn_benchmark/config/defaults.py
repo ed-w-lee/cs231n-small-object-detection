@@ -170,7 +170,12 @@ _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
 _C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = False
 # Custom rpn head, empty to use default conv or separable conv
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
-
+# RPN loss type 
+# check modeling/rpn/loss.py for options
+_C.MODEL.RPN.OBJECTNESS_LOSS_FN = "BCE"
+_C.MODEL.RPN.FOCAL_LOSS_ALPHA = 0.25
+_C.MODEL.RPN.FOCAL_LOSS_GAMMA = 2.0
+_C.MODEL.RPN.REDUCED_FOCAL_LOSS_CUTOFF = 0.5
 
 # ---------------------------------------------------------------------------- #
 # ROI HEADS options

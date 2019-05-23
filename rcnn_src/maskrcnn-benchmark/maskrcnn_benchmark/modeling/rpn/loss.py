@@ -13,6 +13,8 @@ from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 from ..utils import cat
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
+from maskrcnn_benchmark.layers import SigmoidFocalLoss
+from maskrcnn_benchmark.layers import SigmoidReducedFocalLoss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
@@ -24,12 +26,13 @@ class RPNLossComputation(object):
     """
 
     def __init__(self, proposal_matcher, fg_bg_sampler, box_coder,
-                 generate_labels_func):
+                 generate_labels_func, objectness_loss):
         """
         Arguments:
             proposal_matcher (Matcher)
             fg_bg_sampler (BalancedPositiveNegativeSampler)
             box_coder (BoxCoder)
+            objectness_loss (dict with fn: function, avg: boolean)
         """
         # self.target_preparator = target_preparator
         self.proposal_matcher = proposal_matcher
@@ -38,6 +41,7 @@ class RPNLossComputation(object):
         self.copied_fields = []
         self.generate_labels_func = generate_labels_func
         self.discard_cases = ['not_visibility', 'between_thresholds']
+        self.objectness_loss = objectness_loss
 
     def match_targets_to_anchors(self, anchor, target, copied_fields=[]):
         match_quality_matrix = boxlist_iou(target, anchor)
@@ -124,9 +128,15 @@ class RPNLossComputation(object):
             size_average=False,
         ) / (sampled_inds.numel())
 
-        objectness_loss = F.binary_cross_entropy_with_logits(
+        # objectness_loss = objectness_loss_func(
+        #     objectness[sampled_inds], labels[sampled_inds]
+        # ) / (sampled_inds.numel())
+
+        objectness_loss = self.objectness_loss['fn'](
             objectness[sampled_inds], labels[sampled_inds]
         )
+        if self.objectness_loss['avg']:
+            objectness_loss /= sampled_inds.numel()
 
         return objectness_loss, box_loss
 
@@ -148,10 +158,34 @@ def make_rpn_loss_evaluator(cfg, box_coder):
         cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION
     )
 
+    obj_loss_fn_type = cfg.MODEL.RPN.OBJECTNESS_LOSS_FN
+    obj_loss = {}
+    if obj_loss_fn_type == "BCE":
+        obj_loss['fn'] = F.binary_cross_entropy_with_logits
+        obj_loss['avg'] = False
+    elif obj_loss_fn_type == "Focal":
+        obj_loss['fn'] = SigmoidFocalLoss(
+            cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
+        )
+        obj_loss['avg'] = True
+    elif obj_loss_fn_type == "ReducedFocal":
+        obj_loss['fn'] = SigmoidFocalLoss(
+            cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
+            cfg.MODEL.RPN.REDUCED_FOCAL_LOSS_CUTOFF,
+        )
+        obj_loss['avg'] = True
+    elif obj_loss_fn_type == "AreaFocal":
+        raise NotImplementedError("area focal loss not yet implemented")
+    else:
+        raise ValueError("invalid objectness_loss_type: {}".format(objectness_loss_type))
+
     loss_evaluator = RPNLossComputation(
         matcher,
         fg_bg_sampler,
         box_coder,
-        generate_rpn_labels
+        generate_rpn_labels,
+        obj_loss,
     )
     return loss_evaluator
