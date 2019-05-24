@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
 def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
