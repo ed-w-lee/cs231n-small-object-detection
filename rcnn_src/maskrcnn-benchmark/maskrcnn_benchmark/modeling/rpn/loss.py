@@ -13,7 +13,7 @@ from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 from ..utils import cat
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
-from maskrcnn_benchmark.layers import SigmoidFocalLoss
+from maskrcnn_benchmark.layers import (SigmoidFocalLoss, BinarySigmoidFocalLoss)
 from maskrcnn_benchmark.layers import SigmoidReducedFocalLoss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
@@ -164,7 +164,7 @@ def make_rpn_loss_evaluator(cfg, box_coder):
         obj_loss['fn'] = F.binary_cross_entropy_with_logits
         obj_loss['avg'] = False
     elif obj_loss_fn_type == "Focal":
-        obj_loss['fn'] = SigmoidFocalLoss(
+        obj_loss['fn'] = BinarySigmoidFocalLoss(
             cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
             cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
         )

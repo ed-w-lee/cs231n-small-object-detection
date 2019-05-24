@@ -28,8 +28,8 @@ class SigmoidAreaReducedFocalLoss(nn.Module):
         self.alpha = alpha
         self.cutoff = cutoff
 
-    def forward(self, logits, targets):
-        loss = sigmoid_reduced_focal_loss(logits, targets, self.gamma, self.alpha, self.cutoff)
+    def forward(self, logits, targets, areas, *args):
+        loss = sigmoid_reduced_focal_loss(logits, targets, areas, self.gamma, self.alpha, self.cutoff)
         return loss.sum()
 
     def __repr__(self):

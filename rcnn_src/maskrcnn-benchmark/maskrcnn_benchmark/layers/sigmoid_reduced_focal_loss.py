@@ -21,6 +21,12 @@ def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     term2 = term2coef * torch.log(1 - p)
     return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
 
+def binary_sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
+    bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+    pt = torch.exp(-bce_loss)
+    rf_loss = (pt < cutoff).float() * 1. * bce_loss \
+            + (p >= cutoff).float() * self.alpha * (1-pt)**gamma * bce_loss
+    return rf_loss
 
 class SigmoidReducedFocalLoss(nn.Module):
     def __init__(self, gamma, alpha, cutoff):
@@ -29,7 +35,8 @@ class SigmoidReducedFocalLoss(nn.Module):
         self.alpha = alpha
         self.cutoff = cutoff
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, *args):
+        # args are ignored
         loss = sigmoid_reduced_focal_loss(logits, targets, self.gamma, self.alpha, self.cutoff)
         return loss.sum()
 
@@ -40,3 +47,24 @@ class SigmoidReducedFocalLoss(nn.Module):
         tmpstr += ", cutoff=" + str(self.cutoff)
         tmpstr += ")"
         return tmpstr
+
+class BinarySigmoidReducedFocalLoss(nn.Module):
+    def __init__(self, gamma, alpha, cutoff):
+        super(SigmoidFocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        self.cutoff = cutoff
+
+    def forward(self, logits, targets, *args):
+        # args are ignored
+        loss = binary_sigmoid_reduced_focal_loss(logits, targets, self.gamma, self.alpha, self.cutoff)
+        return loss.sum()
+
+    def __repr__(self):
+        tmpstr = self.__class__.__name__ + "("
+        tmpstr += "gamma=" + str(self.gamma)
+        tmpstr += ", alpha=" + str(self.alpha)
+        tmpstr += ", cutoff=" + str(self.cutoff)
+        tmpstr += ")"
+        return tmpstr
+

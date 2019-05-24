@@ -58,7 +58,8 @@ class SigmoidFocalLoss(nn.Module):
         self.gamma = gamma
         self.alpha = alpha
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, *args):
+        # args are ignored
         device = logits.device
         if logits.is_cuda:
             loss_func = sigmoid_focal_loss_cuda
@@ -74,3 +75,23 @@ class SigmoidFocalLoss(nn.Module):
         tmpstr += ", alpha=" + str(self.alpha)
         tmpstr += ")"
         return tmpstr
+
+class BinarySigmoidFocalLoss(nn.Module):
+    def __init__(self, gamma, alpha):
+        super(BinarySigmoidFocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+
+    def forward(self, logits, targets, *args):
+        bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+        pt = torch.exp(-bce_loss)
+        f_loss = self.alpha * (1-pt)**self.gamma * bce_loss
+        return f_loss.sum()
+
+    def __repr__(self):
+        tmpstr = self.__class__.__name__ + "("
+        tmpstr += "gamma=" + str(self.gamma)
+        tmpstr += ", alpha=" + str(self.alpha)
+        tmpstr += ")"
+        return tmpstr
+
