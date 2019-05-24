@@ -61,8 +61,12 @@ class SigmoidFocalLoss(nn.Module):
         super(SigmoidFocalLoss, self).__init__()
         if hasattr(gamma, '__getitem__'):
             self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
         if hasattr(alpha, '__getitem__'):
             self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
 
     def forward(self, logits, targets, *args):
         # args are ignored
@@ -87,8 +91,12 @@ class BinarySigmoidFocalLoss(nn.Module):
         super(BinarySigmoidFocalLoss, self).__init__()
         if hasattr(gamma, '__getitem__'):
             self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
         if hasattr(alpha, '__getitem__'):
             self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
 
     def forward(self, logits, targets, *args):
         loss = binary_sigmoid_focal_loss(logits, targets, self.gamma, self.alpha)

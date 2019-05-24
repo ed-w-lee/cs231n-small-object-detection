@@ -31,10 +31,16 @@ class SigmoidReducedFocalLoss(nn.Module):
         super(SigmoidReducedFocalLoss, self).__init__()
         if hasattr(gamma, '__getitem__'):
             self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
         if hasattr(alpha, '__getitem__'):
             self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
         if hasattr(cutoff, '__getitem__'):
             self.cutoff = cutoff[0]
+        else:
+            self.cutoff = cutoff
 
     def forward(self, logits, targets, *args):
         # args are ignored
@@ -54,10 +60,16 @@ class BinarySigmoidReducedFocalLoss(nn.Module):
         super(BinarySigmoidReducedFocalLoss, self).__init__()
         if hasattr(gamma, '__getitem__'):
             self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
         if hasattr(alpha, '__getitem__'):
             self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
         if hasattr(cutoff, '__getitem__'):
             self.cutoff = cutoff[0]
+        else:
+            self.cutoff = cutoff
 
     def forward(self, logits, targets, *args):
         # args are ignored
