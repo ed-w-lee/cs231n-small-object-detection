@@ -52,6 +52,13 @@ def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
     term2 = p ** gamma * torch.log(1 - p)
     return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
 
+def binary_sigmoid_focal_loss(logits, targets, gamma, alpha):
+    gamma = gamma[0]
+    alpha = alpha[0]
+    bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+    pt = torch.exp(-bce_loss)
+    f_loss = alpha * (1-pt)**gamma * bce_loss
+    return f_loss
 
 class SigmoidFocalLoss(nn.Module):
     def __init__(self, gamma, alpha):
@@ -84,10 +91,8 @@ class BinarySigmoidFocalLoss(nn.Module):
         self.alpha = alpha
 
     def forward(self, logits, targets, *args):
-        bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
-        pt = torch.exp(-bce_loss)
-        f_loss = self.alpha * (1-pt)**self.gamma * bce_loss
-        return f_loss.sum()
+        loss = binary_sigmoid_focal_loss(logits, targets, self.gamma, self.alpha)
+        return loss.sum()
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("
