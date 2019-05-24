@@ -5,9 +5,6 @@ from torch.autograd.function import once_differentiable
 
 def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     num_classes = logits.shape[1]
-    gamma = gamma[0]
-    alpha = alpha[0]
-    cutoff = cutoff[0]
     dtype = targets.dtype
     device = targets.device
     class_range = torch.arange(1, num_classes+1, dtype=dtype, device=device).unsqueeze(0)
@@ -23,9 +20,6 @@ def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
 
 def binary_sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
-    gamma = gamma[0]
-    alpha = alpha[0]
-    cutoff = cutoff[0]
     bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
     pt = torch.exp(-bce_loss)
     rf_loss = (pt < cutoff).float() * alpha * bce_loss \
@@ -35,9 +29,12 @@ def binary_sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
 class SigmoidReducedFocalLoss(nn.Module):
     def __init__(self, gamma, alpha, cutoff):
         super(SigmoidReducedFocalLoss, self).__init__()
-        self.gamma = gamma
-        self.alpha = alpha
-        self.cutoff = cutoff
+        if hasattr(gamma, '__getitem__'):
+            self.gamma = gamma[0]
+        if hasattr(alpha, '__getitem__'):
+            self.alpha = alpha[0]
+        if hasattr(cutoff, '__getitem__'):
+            self.cutoff = cutoff[0]
 
     def forward(self, logits, targets, *args):
         # args are ignored
@@ -55,9 +52,12 @@ class SigmoidReducedFocalLoss(nn.Module):
 class BinarySigmoidReducedFocalLoss(nn.Module):
     def __init__(self, gamma, alpha, cutoff):
         super(BinarySigmoidReducedFocalLoss, self).__init__()
-        self.gamma = gamma
-        self.alpha = alpha
-        self.cutoff = cutoff
+        if hasattr(gamma, '__getitem__'):
+            self.gamma = gamma[0]
+        if hasattr(alpha, '__getitem__'):
+            self.alpha = alpha[0]
+        if hasattr(cutoff, '__getitem__'):
+            self.cutoff = cutoff[0]
 
     def forward(self, logits, targets, *args):
         # args are ignored
