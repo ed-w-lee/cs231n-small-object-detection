@@ -38,7 +38,7 @@ class SigmoidReducedFocalLoss(nn.Module):
 
     def forward(self, logits, targets, *args):
         # args are ignored
-        loss = sigmoid_reduced_focal_loss(logits, targets, self.gamma, self.alpha, self.cutoff)
+        loss = sigmoid_reduced_focal_loss(logits, targets.int(), self.gamma, self.alpha, self.cutoff)
         return loss.sum()
 
     def __repr__(self):

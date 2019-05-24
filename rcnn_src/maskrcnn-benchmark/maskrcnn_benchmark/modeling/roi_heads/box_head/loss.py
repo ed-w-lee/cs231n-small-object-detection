@@ -148,7 +148,7 @@ class FastRCNNLossComputation(object):
 
         # classification_loss = F.cross_entropy(class_logits, labels)
         classification_loss = self.cls_loss['fn'](
-            class_logits, labels.int()
+            class_logits, labels
         )
         if self.cls_loss['avg']:
             classification_loss /= labels.numel()

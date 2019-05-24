@@ -67,7 +67,7 @@ class SigmoidFocalLoss(nn.Module):
         else:
             loss_func = sigmoid_focal_loss_cpu
 
-        loss = loss_func(logits, targets, self.gamma, self.alpha)
+        loss = loss_func(logits, targets.int(), self.gamma, self.alpha)
         return loss.sum()
 
     def __repr__(self):
@@ -84,6 +84,7 @@ class BinarySigmoidFocalLoss(nn.Module):
         self.alpha = alpha
 
     def forward(self, logits, targets, *args):
+        targets = targets.int()
         bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
         pt = torch.exp(-bce_loss)
         f_loss = self.alpha * (1-pt)**self.gamma * bce_loss
