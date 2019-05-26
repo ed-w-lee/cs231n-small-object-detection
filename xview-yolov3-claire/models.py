@@ -101,7 +101,10 @@ class YOLOLayer(nn.Module):
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
         self.anchor_w = self.scaled_anchors[:, 0:1].view((1, nA, 1, 1))
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
-
+        
+        # Claire added
+#         self.MSELoss_unreduced = nn.MSELoss(reduction='none')
+        
     def forward(self, p, targets=None, requestPrecision=False, weight=None, epoch=None):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
@@ -163,10 +166,18 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 # wC = weight[torch.argmax(tcls, 1)]  # weight class
                 # wC /= sum(wC)
+                
+                # Claire added:
+                areas = width.cuda() * height.cuda()
+                areas = areas[mask]
+#                 if sum(areas[areas > 250]) > 1: print("Saw area > 250")
+                area_coeffs = torch.ones(areas.shape, device=device) * 4
+                area_coeffs[areas < 250] = 40
+                
                 lx = 2 * MSELoss(x[mask], tx[mask])
                 ly = 2 * MSELoss(y[mask], ty[mask])
-                lw = 4 * MSELoss(w[mask], tw[mask])
-                lh = 4 * MSELoss(h[mask], th[mask])
+                lw = area_coeffs.mul((w[mask] - tw[mask]).pow(2)).sum()
+                lh = area_coeffs.mul((h[mask] - th[mask]).pow(2)).sum()
                 lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
                 lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))  # * min(epoch*.01 + 0.125, 1)

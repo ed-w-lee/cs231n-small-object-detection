@@ -101,17 +101,23 @@ def convert_to_rectangle_list(coordinates):
     """
     rectangle_list = []
     small_rectangle_list = []
+    small_indices = []
     
     number_of_rects = int(len(coordinates) / 4)
     for i in range(number_of_rects):
         rect = Rectangle(
             coordinates[4 * i], coordinates[4 * i + 1], coordinates[4 * i + 2],
             coordinates[4 * i + 3])
+        # If rectangle has an impossible area (<= 0), skip
+        if rect.is_empty():
+            continue
+        # Add rectangle/other info to appropriate lists
         rectangle_list.append(rect)
         if rect.is_small(): 
             small_rectangle_list.append(rect)
+            small_indices.append(i)
             
-    return rectangle_list, small_rectangle_list
+    return rectangle_list, small_rectangle_list, small_indices
 
 def ap_from_pr(p, r):
     """
@@ -250,6 +256,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
         # Claire comment: ground truth bounding boxes, class
         gt_box = gt_coords[(gt_chips == pchips[file_ind]).flatten()]
         gt_cls = gt_classes[(gt_chips == pchips[file_ind])]
+        print("Num ground truth bboxes: %d" % len(gt_cls))
 
         # Claire comment: For each class
         for i in gt_unique:
@@ -263,8 +270,12 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
             det_box_i_cls = det_box_i_cls[ssort].flatten().tolist()
 
             # Claire comment: convert into Rectangle objects (has helper functions)
-            gt_rects, small_gt_rects = convert_to_rectangle_list(gt_box_i_cls)
-            rects, _ = convert_to_rectangle_list(det_box_i_cls)
+            gt_rects, small_gt_rects, _ = convert_to_rectangle_list(gt_box_i_cls)
+            rects, small_rects, small_indices = convert_to_rectangle_list(det_box_i_cls)
+            
+            # Claire added
+            small_scores = s[ssort].tolist().copy()
+            small_scores = [small_scores[i] for i in small_indices] # Select only scores for small bounding rects
 
             # Claire comment: match all Rectangles
             attempted[i] += len(rects)
@@ -272,15 +283,15 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
             rects_matched, gt_matched = matching.greedy_match(iou_threshold) # Claire comment: returns two boolean lists
             
             # Claire added: match against small ground truth Rectangles only
-            small_matching = Matching(small_gt_rects, rects)
+            small_matching = Matching(small_gt_rects, small_rects)
             rects_matched_small, small_gt_matched = small_matching.greedy_match(iou_threshold)
             per_file_class_data[i]['small']['matches'] += rects_matched_small
             num_small_gt_per_cls[i] += len(small_gt_matched)
             # Claire added: set unmatched detections outside of area range to ignore
-            small_scores = per_file_class_data[i]['all']['scores'].copy()
-            for j, matched in enumerate(rects_matched_small):
-                if not matched and not rects[j].is_small(): 
-                    small_scores[j] = -np.inf
+#             small_scores = s[ssort].tolist().copy()
+#             for j, matched in enumerate(rects_matched_small):
+#                 if not matched and not rects[j].is_small(): 
+#                     small_scores[j] = -np.inf
             per_file_class_data[i]['small']['scores'] += small_scores
 
             # we aggregate confidence scores, rectangles, and num_gt across classes
@@ -294,7 +305,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
     per_class_r = { key: np.ones(max_gt_cls) * float('nan') for key in per_file_class_data[11].keys() }
     per_class_rcount = { key: np.ones(max_gt_cls) * float('nan') for key in per_file_class_data[11].keys() }
 
-    # Claire comment: for each class
+    # Claire comment: for each class, calculate #FPs and TPs, precision, recall, AP
     for i in gt_unique:
         for size in per_file_class_data[i].keys(): # Claire added
             scores = np.array(per_file_class_data[i][size]['scores'])
@@ -302,11 +313,12 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
 
             if num_gt_per_cls[i] != 0:
                 sorted_indices = np.argsort(scores)[::-1]
+#                 print("i = %d, size = %s, %d == %d" % (i, size, len(scores), len(rects_matched)))
                 tp_sum = np.cumsum(rects_matched[sorted_indices]) # Claire comment: cumsum b/c P, R calculated per detected positive
                 fp_sum = np.cumsum(np.logical_not(rects_matched[sorted_indices]))
                 precision = tp_sum / (tp_sum + fp_sum + np.spacing(1)) # Claire comment: np.spacing(1) to prevent divide by 0
                 recall = tp_sum / num_gt_per_cls[i]
-                per_class_p[size][i] = np.sum(rects_matched) / len(rects_matched) # Claire comment: not cum, just overall P 
+                per_class_p[size][i] = np.sum(rects_matched) / (len(rects_matched) + np.spacing(1)) # Claire comment: not cum, just overall P 
                 per_class_r[size][i] = np.sum(rects_matched) / num_gt_per_cls[i]
                 per_class_rcount[size][i] = np.sum(rects_matched)
                 ap = ap_from_pr(precision, recall)
