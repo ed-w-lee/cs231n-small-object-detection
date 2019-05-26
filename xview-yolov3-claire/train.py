@@ -92,8 +92,8 @@ def main(opt):
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()
-    print('%10s' * 16 % (
-        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
+    print('%10s' * 18 % (
+        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time', 'FPiou', 'FPcls'))
     class_weights = xview_class_weights_hard_mining(range(60)).to(device)
     for epoch in range(opt.epochs):
         epoch += start_epoch
@@ -115,7 +115,7 @@ def main(opt):
 
         ui = -1
         rloss = defaultdict(float)  # running loss
-        metrics = torch.zeros(4, 60)
+        metrics = torch.zeros(6, 60)
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
@@ -152,11 +152,11 @@ def main(opt):
                 else:
                     mean_recall = 0
 
-                s = ('%10s%10s' + '%10.3g' * 14) % (
+                s = ('%10s%10s' + '%10.3g' * 16) % (
                     '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
                     rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
                     rloss['loss'], mean_precision, mean_recall, model.losses['nGT'], model.losses['TP'],
-                    model.losses['FP'], model.losses['FN'], time.time() - t1)
+                    model.losses['FP'], model.losses['FN'], time.time() - t1, model.losses['FP_coord'], model.losses['FP_class'])
                 t1 = time.time()
                 print(s)
 

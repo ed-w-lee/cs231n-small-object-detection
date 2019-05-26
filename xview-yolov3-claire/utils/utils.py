@@ -170,6 +170,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
+    FP_coord = torch.ByteTensor(nB, max(nT)).fill_(0) # Claire added
+    FP_class = torch.ByteTensor(nB, max(nT)).fill_(0) # Claire added
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
     TC = torch.ShortTensor(nB, max(nT)).fill_(-1)  # target category
 
@@ -240,9 +242,11 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
             TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
+            FP_coord[b, i] = (FP[b, i] == 1) & (iou_pred <= .5)
+            FP_class[b, i] = (FP[b, i] == 1) & (pcls != tc)
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
-    return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC
+    return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC, FP_coord, FP_class
 
 
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device='cpu'):

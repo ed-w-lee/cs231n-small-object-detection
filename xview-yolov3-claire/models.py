@@ -153,7 +153,7 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 2] = x.data + gx + width / 2
                 pred_boxes[..., 3] = y.data + gy + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, FP_coord, FP_class = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                               requestPrecision)
             tcls = tcls[mask]
@@ -168,16 +168,16 @@ class YOLOLayer(nn.Module):
                 # wC /= sum(wC)
                 
                 # Claire added:
-                areas = width.cuda() * height.cuda()
-                areas = areas[mask]
-#                 if sum(areas[areas > 250]) > 1: print("Saw area > 250")
-                area_coeffs = torch.ones(areas.shape, device=device) * 4
-                area_coeffs[areas < 250] = 40
+#                 areas = width.cuda() * height.cuda()
+#                 areas = areas[mask]
+# #                 if sum(areas[areas > 250]) > 1: print("Saw area > 250")
+#                 area_coeffs = torch.ones(areas.shape, device=device) * 4
+#                 area_coeffs[areas < 250] = 40
                 
                 lx = 2 * MSELoss(x[mask], tx[mask])
                 ly = 2 * MSELoss(y[mask], ty[mask])
-                lw = area_coeffs.mul((w[mask] - tw[mask]).pow(2)).sum()
-                lh = area_coeffs.mul((h[mask] - th[mask]).pow(2)).sum()
+                lw = 4 * MSELoss(w[mask], tw[mask]) # area_coeffs.mul((w[mask] - tw[mask]).pow(2)).sum()
+                lh = 4 * MSELoss(h[mask], th[mask]) # area_coeffs.mul((h[mask] - th[mask]).pow(2)).sum()
                 lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
                 lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))  # * min(epoch*.01 + 0.125, 1)
@@ -196,7 +196,7 @@ class YOLOLayer(nn.Module):
                     FPe[c] += 1
 
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   nGT, TP, FP, FPe, FN, TC
+                   nGT, TP, FP, FPe, FN, TC, FP_coord, FP_class
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -219,7 +219,7 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC', 'FP_coord', 'FP_class']
 
     def forward(self, x, targets=None, requestPrecision=False, weight=None, epoch=None):
         is_training = targets is not None
@@ -251,7 +251,7 @@ class Darknet(nn.Module):
         if is_training:
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
-            metrics = torch.zeros(4, 60)  # TP, FP, FN, target_count
+            metrics = torch.zeros(6, 60)  # TP, FP, FP_coord, FP_class, FN, target_count
 
             ui = np.unique(self.losses['TC'])[1:]
             for i in ui:
@@ -259,6 +259,8 @@ class Darknet(nn.Module):
                 metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
                 metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
                 metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
+                metrics[4, i] = (self.losses['FP_coord'][j] > 0).sum().float()  # FP b/c coords
+                metrics[5, i] = (self.losses['FP_class'][j] > 0).sum().float()  # FP b/c class
             metrics[3] = metrics.sum(0)
             metrics[1] += self.losses['FPe']
 
@@ -267,6 +269,8 @@ class Darknet(nn.Module):
             self.losses['FN'] = metrics[2].sum()
             self.losses['TC'] = 0
             self.losses['metrics'] = metrics
+            self.losses['FP_coord'] = metrics[4].sum()
+            self.losses['FP_class'] = metrics[5].sum()
 
         return sum(output) if is_training else torch.cat(output, 1)
 
