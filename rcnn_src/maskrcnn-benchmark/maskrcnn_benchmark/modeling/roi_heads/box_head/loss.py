@@ -3,6 +3,7 @@ import torch
 from torch.nn import functional as F
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
+from maskrcnn_benchmark.layers import SigmoidFocalLoss
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
@@ -23,7 +24,8 @@ class FastRCNNLossComputation(object):
         proposal_matcher, 
         fg_bg_sampler, 
         box_coder, 
-        cls_agnostic_bbox_reg=False
+        cls_loss,
+        cls_agnostic_bbox_reg=False,
     ):
         """
         Arguments:
@@ -35,6 +37,7 @@ class FastRCNNLossComputation(object):
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.cls_loss = cls_loss
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -143,7 +146,12 @@ class FastRCNNLossComputation(object):
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
 
-        classification_loss = F.cross_entropy(class_logits, labels)
+        # classification_loss = F.cross_entropy(class_logits, labels)
+        classification_loss = self.cls_loss['fn'](
+            class_logits, labels
+        )
+        if self.cls_loss['avg']:
+            classification_loss /= labels.numel()
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
@@ -183,11 +191,35 @@ def make_roi_box_loss_evaluator(cfg):
 
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
+    cls_loss_fn_type = cfg.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_FN
+    cls_loss = {}
+    if cls_loss_fn_type == "CE":
+        cls_loss['fn'] = F.cross_entropy
+        cls_loss['avg'] = False
+    elif cls_loss_fn_type == "Focal":
+        cls_loss['fn'] = SigmoidFocalLoss(
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
+        )
+        cls_loss['avg'] = True
+    elif cls_loss_fn_type == "ReducedFocal":
+        cls_loss['fn'] = SigmoidReducedFocalLoss(
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
+            cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
+        )
+        cls_loss['avg'] = True
+    elif cls_loss_fn_type == "AreaFocal":
+        raise NotImplementedError("area focal loss not yet implemented")
+    else:
+        raise ValueError("invalid classification loss type: {}".format(cls_loss_fn_type))
+
     loss_evaluator = FastRCNNLossComputation(
         matcher, 
         fg_bg_sampler, 
         box_coder, 
-        cls_agnostic_bbox_reg
+        cls_loss,
+        cls_agnostic_bbox_reg,
     )
 
     return loss_evaluator

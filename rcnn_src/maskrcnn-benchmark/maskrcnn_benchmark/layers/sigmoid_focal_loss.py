@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 
@@ -39,8 +40,6 @@ sigmoid_focal_loss_cuda = _SigmoidFocalLoss.apply
 
 def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
     num_classes = logits.shape[1]
-    gamma = gamma[0]
-    alpha = alpha[0]
     dtype = targets.dtype
     device = targets.device
     class_range = torch.arange(1, num_classes+1, dtype=dtype, device=device).unsqueeze(0)
@@ -51,21 +50,33 @@ def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
     term2 = p ** gamma * torch.log(1 - p)
     return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
 
+def binary_sigmoid_focal_loss(logits, targets, gamma, alpha):
+    bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+    pt = torch.exp(-bce_loss)
+    f_loss = alpha * (1-pt)**gamma * bce_loss
+    return f_loss
 
 class SigmoidFocalLoss(nn.Module):
     def __init__(self, gamma, alpha):
         super(SigmoidFocalLoss, self).__init__()
-        self.gamma = gamma
-        self.alpha = alpha
+        if hasattr(gamma, '__getitem__'):
+            self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
+        if hasattr(alpha, '__getitem__'):
+            self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, *args):
+        # args are ignored
         device = logits.device
         if logits.is_cuda:
             loss_func = sigmoid_focal_loss_cuda
         else:
             loss_func = sigmoid_focal_loss_cpu
 
-        loss = loss_func(logits, targets, self.gamma, self.alpha)
+        loss = loss_func(logits, targets.int(), self.gamma, self.alpha)
         return loss.sum()
 
     def __repr__(self):
@@ -74,3 +85,27 @@ class SigmoidFocalLoss(nn.Module):
         tmpstr += ", alpha=" + str(self.alpha)
         tmpstr += ")"
         return tmpstr
+
+class BinarySigmoidFocalLoss(nn.Module):
+    def __init__(self, gamma, alpha):
+        super(BinarySigmoidFocalLoss, self).__init__()
+        if hasattr(gamma, '__getitem__'):
+            self.gamma = gamma[0]
+        else:
+            self.gamma = gamma
+        if hasattr(alpha, '__getitem__'):
+            self.alpha = alpha[0]
+        else:
+            self.alpha = alpha
+
+    def forward(self, logits, targets, *args):
+        loss = binary_sigmoid_focal_loss(logits, targets, self.gamma, self.alpha)
+        return loss.sum()
+
+    def __repr__(self):
+        tmpstr = self.__class__.__name__ + "("
+        tmpstr += "gamma=" + str(self.gamma)
+        tmpstr += ", alpha=" + str(self.alpha)
+        tmpstr += ")"
+        return tmpstr
+

@@ -38,12 +38,6 @@ def main():
         metavar="FILE",
         help="path to checkpoint file to evaluate",
     )
-    parser.add_argument(
-        "--min-iter",
-        default=0,
-        type=int,
-        help="smallest iteration to be evaluated"
-    )
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument(
         "opts",
