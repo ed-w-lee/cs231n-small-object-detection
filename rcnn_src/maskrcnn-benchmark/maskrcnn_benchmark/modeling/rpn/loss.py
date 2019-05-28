@@ -14,7 +14,7 @@ from ..utils import cat
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers import (SigmoidFocalLoss, BinarySigmoidFocalLoss)
-from maskrcnn_benchmark.layers import SigmoidReducedFocalLoss
+from maskrcnn_benchmark.layers import BinarySigmoidReducedFocalLoss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
@@ -170,7 +170,7 @@ def make_rpn_loss_evaluator(cfg, box_coder):
         )
         obj_loss['avg'] = True
     elif obj_loss_fn_type == "ReducedFocal":
-        obj_loss['fn'] = SigmoidReducedFocalLoss(
+        obj_loss['fn'] = BinarySigmoidReducedFocalLoss(
             cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
             cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
             cfg.MODEL.RPN.REDUCED_FOCAL_LOSS_CUTOFF,
