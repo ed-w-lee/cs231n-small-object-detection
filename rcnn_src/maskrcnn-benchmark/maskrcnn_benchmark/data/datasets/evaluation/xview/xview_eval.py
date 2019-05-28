@@ -40,7 +40,7 @@ def do_xview_evaluation(dataset, predictions, output_folder,
             splits=dataset.get_splits(),
         )
         all_results.append(result)
-        result_str += "mAP: {:.4f}, mAR: {:.4f}\n".format(result["map"]['all'], result["map"]["all"])
+        result_str += "mAP: {:.4f}, mAR: {:.4f}\n".format(result["map"]['all'], result["mar"]["all"])
         for split, mAP in result['map'].items():
             if split == 'all': 
                 continue
