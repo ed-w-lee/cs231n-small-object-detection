@@ -29,7 +29,7 @@ class SigmoidClassLoss(nn.Module):
         self.counts = torch.zeros(max(counts_dict) + 1)
         keys = torch.tensor(list(counts_dict.keys()))
         values = torch.tensor(list(counts_dict.values()))
-        self.counts[keys] = values
+        self.counts[keys] = values.float()
 
     def forward(self, logits, targets, **kwargs):
         # args are ignored
