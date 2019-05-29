@@ -229,7 +229,7 @@ def make_roi_box_loss_evaluator(cfg):
             cfg.MODEL.ROI_HEADS.CLASS_LOSS_BETA,
             counts_dict,
         )
-        cls_loss['avg'] = True
+        cls_loss['avg'] = False
     elif cls_loss_fn_type == "AreaFocal":
         raise NotImplementedError("area focal loss not yet implemented")
     else:
