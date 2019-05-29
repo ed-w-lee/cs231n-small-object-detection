@@ -68,7 +68,7 @@ class SigmoidFocalLoss(nn.Module):
         else:
             self.alpha = alpha
 
-    def forward(self, logits, targets, *args):
+    def forward(self, logits, targets, **kwargs):
         # args are ignored
         device = logits.device
         if logits.is_cuda:
@@ -98,7 +98,7 @@ class BinarySigmoidFocalLoss(nn.Module):
         else:
             self.alpha = alpha
 
-    def forward(self, logits, targets, *args):
+    def forward(self, logits, targets, **kwargs):
         loss = binary_sigmoid_focal_loss(logits, targets, self.gamma, self.alpha)
         return loss.sum()
 

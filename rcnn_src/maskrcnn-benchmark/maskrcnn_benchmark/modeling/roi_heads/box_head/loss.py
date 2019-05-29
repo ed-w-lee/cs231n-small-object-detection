@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import json
 import torch
 from torch.nn import functional as F
 
@@ -6,6 +7,7 @@ from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers import (
     SigmoidFocalLoss,
     SigmoidReducedFocalLoss,
+    SigmoidClassLoss,
 )
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
@@ -58,6 +60,7 @@ class FastRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
+        areas = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -66,6 +69,8 @@ class FastRCNNLossComputation(object):
 
             labels_per_image = matched_targets.get_field("labels")
             labels_per_image = labels_per_image.to(dtype=torch.int64)
+
+            areas_per_image = matched_targets.area()
 
             # Label background (below the low threshold)
             bg_inds = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
@@ -82,8 +87,9 @@ class FastRCNNLossComputation(object):
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
+            areas.append(areas_per_image)
 
-        return labels, regression_targets
+        return labels, regression_targets, areas
 
     def subsample(self, proposals, targets):
         """
@@ -96,18 +102,19 @@ class FastRCNNLossComputation(object):
             targets (list[BoxList])
         """
 
-        labels, regression_targets = self.prepare_targets(proposals, targets)
+        labels, regression_targets, areas = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
-        for labels_per_image, regression_targets_per_image, proposals_per_image in zip(
-            labels, regression_targets, proposals
+        for labels_per_image, regression_targets_per_image, areas_per_image, proposals_per_image in zip(
+            labels, regression_targets, areas, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
+            proposals_per_image.add_field("areas", areas_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
@@ -148,10 +155,11 @@ class FastRCNNLossComputation(object):
         regression_targets = cat(
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
+        areas = cat([proposal.get_field("areas") for proposal in proposals], dim=0)
 
         # classification_loss = F.cross_entropy(class_logits, labels)
         classification_loss = self.cls_loss['fn'](
-            class_logits, labels
+            class_logits, labels, areas=areas
         )
         if self.cls_loss['avg']:
             classification_loss /= labels.numel()
@@ -210,6 +218,16 @@ def make_roi_box_loss_evaluator(cfg):
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
             cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
+        )
+        cls_loss['avg'] = True
+    elif cls_loss_fn_type == "Class":
+        # me being a lazy fuck
+        counts_dict = {6: 895135, 49: 1414550, 10: 54917, 54: 22780, 52: 5242, 11: 26608, 48: 5792, 7: 30454, 14: 17734, 3: 3190, 53: 7473, 51: 5739, 43: 3053, 5: 10108, 12: 16454, 17: 790, 56: 7281, 60: 464, 9: 15035, 13: 3403, 58: 5736, 57: 11459, 36: 836, 39: 1670, 20: 7744, 45: 1411, 19: 5213, 15: 4169, 8: 4671, 44: 4012, 25: 5254, 24: 3585, 29: 3201, 40: 5770, 34: 880, 26: 3107, 47: 2846, 59: 1609, 16: 582, 46: 248, 42: 464, 55: 594, 32: 1740, 27: 1089, 30: 1037, 28: 934, 50: 1285, 1: 322, 2: 1909, 4: 359, 38: 269, 37: 279, 35: 897, 23: 475, 22: 521, 31: 2504, 21: 442, 18: 70, 41: 1230, 33: 439}
+
+        cls_loss['fn'] = SigmoidClassLoss(
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.ROI_HEADS.CLASS_LOSS_BETA,
+            counts_dict,
         )
         cls_loss['avg'] = True
     elif cls_loss_fn_type == "AreaFocal":

@@ -42,7 +42,7 @@ class SigmoidReducedFocalLoss(nn.Module):
         else:
             self.cutoff = cutoff
 
-    def forward(self, logits, targets, *args):
+    def forward(self, logits, targets, **kwargs):
         # args are ignored
         loss = sigmoid_reduced_focal_loss(logits, targets.int(), self.gamma, self.alpha, self.cutoff)
         return loss.sum()
@@ -71,7 +71,7 @@ class BinarySigmoidReducedFocalLoss(nn.Module):
         else:
             self.cutoff = cutoff
 
-    def forward(self, logits, targets, *args):
+    def forward(self, logits, targets, **kwargs):
         # args are ignored
         loss = binary_sigmoid_reduced_focal_loss(logits, targets, self.gamma, self.alpha, self.cutoff)
         return loss.sum()

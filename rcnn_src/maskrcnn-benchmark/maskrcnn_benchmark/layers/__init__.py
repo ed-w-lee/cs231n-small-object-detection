@@ -15,6 +15,7 @@ from .roi_pool import roi_pool
 from .smooth_l1_loss import smooth_l1_loss
 from .sigmoid_focal_loss import (SigmoidFocalLoss, BinarySigmoidFocalLoss)
 from .sigmoid_reduced_focal_loss import (SigmoidReducedFocalLoss, BinarySigmoidReducedFocalLoss)
+from .sigmoid_class_loss import (SigmoidClassLoss)
 from .dcn.deform_conv_func import deform_conv, modulated_deform_conv
 from .dcn.deform_conv_module import DeformConv, ModulatedDeformConv, ModulatedDeformConvPack
 from .dcn.deform_pool_func import deform_roi_pooling
@@ -37,6 +38,7 @@ __all__ = [
     "SigmoidFocalLoss",
     "BinarySigmoidFocalLoss",
     "SigmoidReducedFocalLoss",
+    "SigmoidClassLoss",
     'deform_conv',
     'modulated_deform_conv',
     'DeformConv',

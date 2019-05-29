@@ -69,6 +69,8 @@ _C.DATASETS = CN()
 _C.DATASETS.TRAIN = ()
 # List of the dataset names for testing, as present in paths_catalog.py
 _C.DATASETS.TEST = ()
+# counts
+_C.DATASETS.COUNTS_FILE = ""
 
 # -----------------------------------------------------------------------------
 # DataLoader
@@ -202,6 +204,7 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 _C.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_FN = "CE"
 _C.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA = 0.25
 _C.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA = 2.0
+_C.MODEL.ROI_HEADS.CLASS_LOSS_BETA = 0.999
 _C.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF = 0.5
 
 # Only used on test mode
