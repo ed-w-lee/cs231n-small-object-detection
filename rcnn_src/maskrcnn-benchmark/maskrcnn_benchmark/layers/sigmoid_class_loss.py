@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 
-def sigmoid_class_loss(logits, targets, n_targets, gamma, beta):
+def sigmoid_class_loss(logits, targets, weights, gamma, beta):
     num_classes = logits.shape[1]
     dtype = targets.dtype
     device = targets.device
@@ -10,11 +10,9 @@ def sigmoid_class_loss(logits, targets, n_targets, gamma, beta):
 
     t = targets.unsqueeze(1)
     p = torch.sigmoid(logits)
-    n_t = n_targets.unsqueeze(1).to(device)+1 # avoid 0s :(
-    term1coef = (1.-p)**gamma * (1.-beta)/(1.-beta**n_t)
-    term2coef = p**gamma * (1.-beta)/(1.-beta**n_t)
-    term1 = term1coef * torch.log(p)
-    term2 = term2coef * torch.log(1 - p)
+    weights = weights.to(device)
+    term1 = torch.log(p) * weights[t.long()-1]
+    term2 = torch.log(1 - p) * weights[t.long()-1]
     return -(t == class_range).float() * term1 - ((t != class_range) * (t >= 0)).float() * term2
 
 class SigmoidClassLoss(nn.Module):
@@ -28,17 +26,20 @@ class SigmoidClassLoss(nn.Module):
             self.beta = beta[0]
         else:
             self.beta = beta
-        self.counts = torch.zeros(max(counts_dict) + 1)
-        keys = torch.tensor(list(counts_dict.keys()))
+        counts = torch.zeros(max(counts_dict))
+        keys = torch.tensor(list(counts_dict.keys()))-1
         values = torch.tensor(list(counts_dict.values()))
-        self.counts[keys] = values.float()
+        counts[keys] = values.float()
+        weights = (1. - self.beta) / (1. - self.beta**counts)
+        self.weights = weights / weights.sum()
+        print(self.weights)
 
     def forward(self, logits, targets, **kwargs):
         # args are ignored
         targets = targets.int()
-        loss = sigmoid_class_loss(logits, targets, self.counts[targets.long()], self.gamma, self.beta)
+        loss = sigmoid_class_loss(logits, targets, self.weights, self.gamma, self.beta)
         # sketch shit for dayzz
-        return 10 * loss.sum()
+        return loss.sum()
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("
