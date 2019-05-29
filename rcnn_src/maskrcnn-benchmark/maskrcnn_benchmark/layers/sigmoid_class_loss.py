@@ -10,9 +10,9 @@ def sigmoid_class_loss(logits, targets, n_targets, gamma, beta):
 
     t = targets.unsqueeze(1)
     p = torch.sigmoid(logits)
-    n_t = n_targets.unsqueeze(1).to(device)
-    term1coef = (1.-p)**gamma * (1-beta)/(1-beta**n_t)
-    term2coef = p**gamma * (1-beta)/(1-beta**n_t)
+    n_t = n_targets.unsqueeze(1).to(device)+1 # avoid 0s :(
+    term1coef = (1.-p)**gamma * (1.-beta)/(1.-beta**n_t)
+    term2coef = p**gamma * (1.-beta)/(1.-beta**n_t)
     term1 = term1coef * torch.log(p)
     term2 = term2coef * torch.log(1 - p)
     return -(t == class_range).float() * term1 - ((t != class_range) * (t >= 0)).float() * term2
