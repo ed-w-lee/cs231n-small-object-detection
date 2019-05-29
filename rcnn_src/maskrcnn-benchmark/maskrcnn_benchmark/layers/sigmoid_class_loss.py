@@ -26,8 +26,10 @@ class SigmoidClassLoss(nn.Module):
             self.beta = beta[0]
         else:
             self.beta = beta
-        self.counts = torch.zeros(max(counts_dict))
-        self.counts[counts_dict.keys()] = counts_dict.values()
+        self.counts = torch.zeros(max(counts_dict) + 1)
+        keys = torch.tensor(list(counts_dict.keys()))
+        values = torch.tensor(list(counts_dict.values()))
+        self.counts[keys] = values
 
     def forward(self, logits, targets, **kwargs):
         # args are ignored
