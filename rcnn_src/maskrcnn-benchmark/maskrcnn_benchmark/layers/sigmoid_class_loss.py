@@ -37,7 +37,8 @@ class SigmoidClassLoss(nn.Module):
         # args are ignored
         targets = targets.int()
         loss = sigmoid_class_loss(logits, targets, self.counts[targets.long()], self.gamma, self.beta)
-        return loss.sum()
+        # sketch shit for dayzz
+        return 100 * loss.sum()
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("
