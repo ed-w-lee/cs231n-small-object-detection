@@ -34,7 +34,7 @@ class SigmoidClassLoss(nn.Module):
     def forward(self, logits, targets, **kwargs):
         # args are ignored
         targets = targets.int()
-        loss = sigmoid_class_loss(logits, targets, self.counts[targets], self.gamma, self.beta)
+        loss = sigmoid_class_loss(logits, targets, self.counts[targets.long()], self.gamma, self.beta)
         return loss.sum()
 
     def __repr__(self):
