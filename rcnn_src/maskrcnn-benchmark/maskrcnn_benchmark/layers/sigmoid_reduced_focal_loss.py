@@ -7,7 +7,7 @@ def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     num_classes = logits.shape[1]
     dtype = targets.dtype
     device = targets.device
-    class_range = torch.arange(1, num_classes+1, dtype=dtype, device=device).unsqueeze(0)
+    class_range = torch.arange(0, num_classes, dtype=dtype, device=device).unsqueeze(0)
 
     t = targets.unsqueeze(1)
     p = torch.sigmoid(logits)
@@ -17,7 +17,7 @@ def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
             + (p <= 1.-cutoff).float()*(p/cutoff)**gamma
     term1 = term1coef * torch.log(p)
     term2 = term2coef * torch.log(1 - p)
-    return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
+    return -(t == class_range).float() * term1 * alpha - (t != class_range).float() * term2 * (1 - alpha)
 
 def binary_sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
