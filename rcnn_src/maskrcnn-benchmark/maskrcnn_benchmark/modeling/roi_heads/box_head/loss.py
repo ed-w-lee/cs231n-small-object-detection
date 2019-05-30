@@ -7,7 +7,7 @@ from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers import (
     SigmoidFocalLoss,
     SigmoidReducedFocalLoss,
-    SigmoidClassLoss,
+    SigmoidAreaReducedFocalLoss,
 )
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
@@ -222,16 +222,17 @@ def make_roi_box_loss_evaluator(cfg):
         cls_loss['avg'] = True
     elif cls_loss_fn_type == "Class":
         # me being a lazy fuck
-        counts_dict = {6: 895135, 49: 1414550, 10: 54917, 54: 22780, 52: 5242, 11: 26608, 48: 5792, 7: 30454, 14: 17734, 3: 3190, 53: 7473, 51: 5739, 43: 3053, 5: 10108, 12: 16454, 17: 790, 56: 7281, 60: 464, 9: 15035, 13: 3403, 58: 5736, 57: 11459, 36: 836, 39: 1670, 20: 7744, 45: 1411, 19: 5213, 15: 4169, 8: 4671, 44: 4012, 25: 5254, 24: 3585, 29: 3201, 40: 5770, 34: 880, 26: 3107, 47: 2846, 59: 1609, 16: 582, 46: 248, 42: 464, 55: 594, 32: 1740, 27: 1089, 30: 1037, 28: 934, 50: 1285, 1: 322, 2: 1909, 4: 359, 38: 269, 37: 279, 35: 897, 23: 475, 22: 521, 31: 2504, 21: 442, 18: 70, 41: 1230, 33: 439}
-
-        cls_loss['fn'] = SigmoidClassLoss(
+        # counts_dict = {6: 895135, 49: 1414550, 10: 54917, 54: 22780, 52: 5242, 11: 26608, 48: 5792, 7: 30454, 14: 17734, 3: 3190, 53: 7473, 51: 5739, 43: 3053, 5: 10108, 12: 16454, 17: 790, 56: 7281, 60: 464, 9: 15035, 13: 3403, 58: 5736, 57: 11459, 36: 836, 39: 1670, 20: 7744, 45: 1411, 19: 5213, 15: 4169, 8: 4671, 44: 4012, 25: 5254, 24: 3585, 29: 3201, 40: 5770, 34: 880, 26: 3107, 47: 2846, 59: 1609, 16: 582, 46: 248, 42: 464, 55: 594, 32: 1740, 27: 1089, 30: 1037, 28: 934, 50: 1285, 1: 322, 2: 1909, 4: 359, 38: 269, 37: 279, 35: 897, 23: 475, 22: 521, 31: 2504, 21: 442, 18: 70, 41: 1230, 33: 439}
+        raise ValueError("deprecated class loss")
+    elif cls_loss_fn_type == "AreaFocal":
+        cls_loss['fn'] = SigmoidAreaReducedFocalLoss(
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
-            cfg.MODEL.ROI_HEADS.CLASS_LOSS_BETA,
-            counts_dict,
+            cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
+            cfg.MODEL.ROI_HEADS.AREA_LOSS_BETA,
+            cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
+            cfg.MODEL.ROI_HEADS.AREA_LOSS_THRESHOLD,
         )
         cls_loss['avg'] = True
-    elif cls_loss_fn_type == "AreaFocal":
-        raise NotImplementedError("area focal loss not yet implemented")
     else:
         raise ValueError("invalid classification loss type: {}".format(cls_loss_fn_type))
 
