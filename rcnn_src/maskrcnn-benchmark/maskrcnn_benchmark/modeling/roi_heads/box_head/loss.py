@@ -159,7 +159,7 @@ class FastRCNNLossComputation(object):
 
         # classification_loss = F.cross_entropy(class_logits, labels)
         classification_loss = self.cls_loss['fn'](
-            class_logits, labels, areas=areas
+            class_logits, labels, areas=areas.to(device)
         )
         if self.cls_loss['avg']:
             classification_loss /= labels.numel()
@@ -185,6 +185,8 @@ class FastRCNNLossComputation(object):
 
         return classification_loss, box_loss
 
+def _cross_entropy_with_kwargs(logits, labels, **kwargs):
+    return F.cross_entropy(logits, labels)
 
 def make_roi_box_loss_evaluator(cfg):
     matcher = Matcher(
@@ -205,7 +207,7 @@ def make_roi_box_loss_evaluator(cfg):
     cls_loss_fn_type = cfg.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_FN
     cls_loss = {}
     if cls_loss_fn_type == "CE":
-        cls_loss['fn'] = F.cross_entropy
+        cls_loss['fn'] = _cross_entropy_with_kwargs
         cls_loss['avg'] = False
     elif cls_loss_fn_type == "Focal":
         cls_loss['fn'] = SigmoidFocalLoss(

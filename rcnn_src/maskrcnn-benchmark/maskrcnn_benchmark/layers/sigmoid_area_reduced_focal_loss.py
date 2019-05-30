@@ -20,8 +20,10 @@ def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, 
     rf_loss = -(t == class_range).float() * term1 * alpha - (t != class_range).float() * term2 * (1 - alpha)
 
     area_offs = areas - area_thresh
+    area_offs[area_offs == 0] = -1 # no nans!
     area_weights = (area_offs <= 0).float() * 1. \
             + (area_offs > 0).float() * (1.-beta)/(1.-beta**area_offs)
+    area_weights = area_weights.unsqueeze(1)
     return area_weights * rf_loss
 
 def binary_sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
