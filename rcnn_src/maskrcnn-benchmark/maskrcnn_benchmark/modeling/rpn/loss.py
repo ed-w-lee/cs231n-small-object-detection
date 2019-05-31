@@ -13,8 +13,12 @@ from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 from ..utils import cat
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
-from maskrcnn_benchmark.layers import (SigmoidFocalLoss, BinarySigmoidFocalLoss)
-from maskrcnn_benchmark.layers import BinarySigmoidReducedFocalLoss
+from maskrcnn_benchmark.layers import (
+    BinarySigmoidFocalLoss,
+    BinarySigmoidReducedFocalLoss,
+    BinarySigmoidAreaReducedFocalLoss,
+    BinaryAreaLoss,
+)
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
@@ -60,6 +64,7 @@ class RPNLossComputation(object):
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []
+        areas = []
         for anchors_per_image, targets_per_image in zip(anchors, targets):
             matched_targets = self.match_targets_to_anchors(
                 anchors_per_image, targets_per_image, self.copied_fields
@@ -87,10 +92,13 @@ class RPNLossComputation(object):
                 matched_targets.bbox, anchors_per_image.bbox
             )
 
+            areas_per_image = matched_targets.area()
+
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
+            areas.append(areas_per_image)
 
-        return labels, regression_targets
+        return labels, regression_targets, areas
 
 
     def __call__(self, anchors, objectness, box_regression, targets):
@@ -106,7 +114,7 @@ class RPNLossComputation(object):
             box_loss (Tensor
         """
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
-        labels, regression_targets = self.prepare_targets(anchors, targets)
+        labels, regression_targets, areas = self.prepare_targets(anchors, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
         sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)
@@ -120,6 +128,7 @@ class RPNLossComputation(object):
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
+        areas = torch.cat(areas, dim=0)
 
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds],
@@ -133,7 +142,7 @@ class RPNLossComputation(object):
         # ) / (sampled_inds.numel())
 
         objectness_loss = self.objectness_loss['fn'](
-            objectness[sampled_inds], labels[sampled_inds]
+            objectness[sampled_inds], labels[sampled_inds], areas=areas[sampled_inds]
         )
         if self.objectness_loss['avg']:
             objectness_loss /= sampled_inds.numel()
@@ -177,7 +186,20 @@ def make_rpn_loss_evaluator(cfg, box_coder):
         )
         obj_loss['avg'] = True
     elif obj_loss_fn_type == "AreaFocal":
-        raise NotImplementedError("area focal loss not yet implemented")
+        obj_loss['fn'] = BinarySigmoidAreaReducedFocalLoss(
+            cfg.MODEL.RPN.FOCAL_LOSS_GAMMA,
+            cfg.MODEL.RPN.FOCAL_LOSS_ALPHA,
+            cfg.MODEL.RPN.AREA_LOSS_BETA,
+            cfg.MODEL.RPN.REDUCED_FOCAL_LOSS_CUTOFF,
+            cfg.MODEL.RPN.AREA_LOSS_THRESHOLD,
+        )
+        obj_loss['avg'] = True
+    elif obj_loss_fn_type == "Area":
+        obj_loss['fn'] = BinaryAreaLoss(
+            cfg.MODEL.RPN.AREA_LOSS_BETA,
+            cfg.MODEL.RPN.AREA_LOSS_THRESHOLD,
+        )
+        obj_loss['avg'] = True
     else:
         raise ValueError("invalid objectness_loss_type: {}".format(obj_loss_fn_type))
 
