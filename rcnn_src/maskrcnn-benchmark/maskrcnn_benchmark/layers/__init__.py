@@ -17,6 +17,7 @@ from .sigmoid_focal_loss import (SigmoidFocalLoss, BinarySigmoidFocalLoss)
 from .sigmoid_reduced_focal_loss import (SigmoidReducedFocalLoss, BinarySigmoidReducedFocalLoss)
 from .sigmoid_area_reduced_focal_loss import (SigmoidAreaReducedFocalLoss, BinarySigmoidAreaReducedFocalLoss)
 from .sigmoid_class_loss import (SigmoidClassLoss)
+from .area_loss import (AreaLoss, BinaryAreaLoss)
 from .dcn.deform_conv_func import deform_conv, modulated_deform_conv
 from .dcn.deform_conv_module import DeformConv, ModulatedDeformConv, ModulatedDeformConvPack
 from .dcn.deform_pool_func import deform_roi_pooling
@@ -43,6 +44,8 @@ __all__ = [
     "SigmoidAreaReducedFocalLoss",
     "BinarySigmoidAreaReducedFocalLoss",
     "SigmoidClassLoss",
+    "AreaLoss",
+    "BinaryAreaLoss",
     'deform_conv',
     'modulated_deform_conv',
     'DeformConv',

@@ -8,6 +8,7 @@ from maskrcnn_benchmark.layers import (
     SigmoidFocalLoss,
     SigmoidReducedFocalLoss,
     SigmoidAreaReducedFocalLoss,
+    AreaLoss,
 )
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
@@ -232,6 +233,12 @@ def make_roi_box_loss_evaluator(cfg):
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
             cfg.MODEL.ROI_HEADS.AREA_LOSS_BETA,
             cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
+            cfg.MODEL.ROI_HEADS.AREA_LOSS_THRESHOLD,
+        )
+        cls_loss['avg'] = True
+    elif cls_loss_fn_type == "Area":
+        cls_loss['fn'] = AreaLoss(
+            cfg.MODEL.ROI_HEADS.AREA_LOSS_BETA,
             cfg.MODEL.ROI_HEADS.AREA_LOSS_THRESHOLD,
         )
         cls_loss['avg'] = True

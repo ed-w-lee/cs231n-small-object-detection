@@ -3,6 +3,14 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
+def _get_area_weights(area, beta, area_thresh):
+    areas[areas == 0] = -1
+    area_offs = areas - area_thresh
+    area_offs[area_offs == 0] = -1
+    area_weights = (area_offs <= 0).float() * 1. \
+        + (area_offs > 0).float() * torch.pow(area_thresh / areas, beta)
+    return area_weights
+
 def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
     num_classes = logits.shape[1]
     dtype = targets.dtype
@@ -19,11 +27,7 @@ def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, 
     term2 = term2coef * torch.log(1 - p)
     rf_loss = -(t == class_range).float() * term1 * alpha - (t != class_range).float() * term2 * (1 - alpha)
 
-    area_offs = areas - area_thresh
-    area_offs[area_offs == 0] = -1 # no nans!
-    area_weights = (area_offs <= 0).float() * 1. \
-            + (area_offs > 0).float() * (1.-beta)/(1.-beta**area_offs)
-    area_weights = area_weights.unsqueeze(1)
+    area_weights = _get_area_weights(areas, beta, area_thresh).unsqueeze(1)
     return area_weights * rf_loss
 
 def binary_sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
@@ -31,11 +35,8 @@ def binary_sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha,
     pt = torch.exp(-bce_loss)
     rf_loss = (pt < cutoff).float() * alpha * bce_loss \
             + (pt >= cutoff).float() * alpha * ((1-pt)/cutoff)**gamma * bce_loss
-    area_offs = areas - area_thresh
-    area_weights = (area_offs <= 0).float() * 1. \
-            + (area_offs > 0).float() * (1.-beta)/(1.-beta**area_offs)
-    arf_loss = rf_loss * area_weights
-    return arf_loss
+    area_weights = _get_area_weights(areas, beta, area_thresh).unsqueeze(1)
+    return area_weights * rf_loss
 
 def _getconst(val):
     return val[0] if hasattr(val, '__getitem__') else val
