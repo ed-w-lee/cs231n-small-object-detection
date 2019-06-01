@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
-def _get_area_weights(area, beta, area_thresh):
+def _get_area_weights(areas, beta, area_thresh):
     areas[areas == 0] = -1
     area_offs = areas - area_thresh
     area_offs[area_offs == 0] = -1
