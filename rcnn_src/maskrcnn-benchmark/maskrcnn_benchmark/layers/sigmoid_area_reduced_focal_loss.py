@@ -4,11 +4,9 @@ import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
 def _get_area_weights(areas, beta, area_thresh):
-    areas[areas == 0] = -1
-    area_offs = areas - area_thresh
-    area_offs[area_offs == 0] = -1
-    area_weights = (area_offs <= 0).float() * 1. \
-        + (area_offs > 0).float() * torch.pow(area_thresh / areas, beta)
+    areas[areas <= area_thresh] = area_thresh - 1
+    area_weights = (areas <= area_thresh).float() * 1. \
+        + (areas > area_thresh).float() * torch.pow(area_thresh / areas, beta)
     return area_weights
 
 def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
