@@ -25,7 +25,7 @@ def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, 
     term2 = term2coef * torch.log(1 - p)
     rf_loss = -(t == class_range).float() * term1 * alpha - (t != class_range).float() * term2 * (1 - alpha)
 
-    area_weights = _get_area_weights(areas, beta, area_thresh)
+    area_weights = _get_area_weights(areas, beta, area_thresh).unsqueeze(1)
     return area_weights * rf_loss
 
 def binary_sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
