@@ -67,7 +67,7 @@ class SigmoidAreaReducedFocalLoss(nn.Module):
         return tmpstr
 
 class BinarySigmoidAreaReducedFocalLoss(nn.Module):
-    def __init__(self, gamma, alpha, cutoff, area_thresh):
+    def __init__(self, gamma, alpha, beta, cutoff, area_thresh):
         super(BinarySigmoidAreaReducedFocalLoss, self).__init__()
         self.gamma = _getconst(gamma)
         self.alpha = _getconst(alpha)
