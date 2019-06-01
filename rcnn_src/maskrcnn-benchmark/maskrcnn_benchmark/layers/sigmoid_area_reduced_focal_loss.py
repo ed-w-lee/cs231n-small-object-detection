@@ -9,14 +9,19 @@ def _get_area_weights(areas, beta, area_thresh):
         + (areas > area_thresh).float() * torch.pow(area_thresh / areas, beta)
     return area_weights
 
-def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh):
+def sigmoid_area_reduced_focal_loss(logits, targets, areas, gamma, alpha, beta, cutoff, area_thresh, norm):
     num_classes = logits.shape[1]
     dtype = targets.dtype
     device = targets.device
     class_range = torch.arange(0, num_classes, dtype=dtype, device=device).unsqueeze(0)
 
     t = targets.unsqueeze(1)
-    p = torch.sigmoid(logits)
+    if norm == 'Sigmoid':
+        p = torch.sigmoid(logits)
+    elif norm == 'Softmax':
+        p = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError('norm must be Sigmoid or Softmax')
     term1coef = (p < cutoff).float()*1 \
             + (p >= cutoff).float()*((1.-p)/cutoff)**gamma
     term2coef = (p > 1.-cutoff).float()*1 \
@@ -40,18 +45,19 @@ def _getconst(val):
     return val[0] if hasattr(val, '__getitem__') else val
 
 class SigmoidAreaReducedFocalLoss(nn.Module):
-    def __init__(self, gamma, alpha, beta, cutoff, area_thresh):
+    def __init__(self, gamma, alpha, beta, cutoff, area_thresh, norm):
         super(SigmoidAreaReducedFocalLoss, self).__init__()
         self.gamma = _getconst(gamma)
         self.alpha = _getconst(alpha)
         self.beta = _getconst(beta)
         self.cutoff = _getconst(cutoff)
         self.area_thresh = _getconst(area_thresh)
+        self.norm = norm
 
     def forward(self, logits, targets, areas, **kwargs):
         # args are ignored
         loss = sigmoid_area_reduced_focal_loss(logits, targets.int(), areas, 
-                self.gamma, self.alpha, self.beta, self.cutoff, self.area_thresh)
+                self.gamma, self.alpha, self.beta, self.cutoff, self.area_thresh, self.norm)
         return loss.sum()
 
     def __repr__(self):
@@ -61,6 +67,7 @@ class SigmoidAreaReducedFocalLoss(nn.Module):
         tmpstr += ", beta=" + str(self.beta)
         tmpstr += ", cutoff=" + str(self.cutoff)
         tmpstr += ", area_thresh=" + str(self.area_thresh)
+        tmpstr += ", norm=" + str(self.norm)
         tmpstr += ")"
         return tmpstr
 

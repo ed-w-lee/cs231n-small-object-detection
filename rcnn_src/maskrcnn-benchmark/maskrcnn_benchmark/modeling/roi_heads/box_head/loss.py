@@ -221,6 +221,7 @@ def make_roi_box_loss_evaluator(cfg):
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_GAMMA,
             cfg.MODEL.ROI_HEADS.FOCAL_LOSS_ALPHA,
             cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
+            cfg.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_NORM,
         )
         cls_loss['avg'] = True
     elif cls_loss_fn_type == "Class":
@@ -234,6 +235,7 @@ def make_roi_box_loss_evaluator(cfg):
             cfg.MODEL.ROI_HEADS.AREA_LOSS_BETA,
             cfg.MODEL.ROI_HEADS.REDUCED_FOCAL_LOSS_CUTOFF,
             cfg.MODEL.ROI_HEADS.AREA_LOSS_THRESHOLD,
+            cfg.MODEL.ROI_HEADS.CLASSIFICATION_LOSS_NORM,
         )
         cls_loss['avg'] = True
     elif cls_loss_fn_type == "Area":

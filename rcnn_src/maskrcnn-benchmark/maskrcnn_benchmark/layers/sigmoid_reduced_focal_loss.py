@@ -3,14 +3,19 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
-def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
+def sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff, norm):
     num_classes = logits.shape[1]
     dtype = targets.dtype
     device = targets.device
     class_range = torch.arange(0, num_classes, dtype=dtype, device=device).unsqueeze(0)
 
     t = targets.unsqueeze(1)
-    p = torch.sigmoid(logits)
+    if norm == 'Sigmoid':
+        p = torch.sigmoid(logits)
+    elif norm == 'Softmax':
+        p = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError('norm must be Sigmoid or Softmax')
     term1coef = (p < cutoff).float()*1 \
             + (p >= cutoff).float()*((1.-p)/cutoff)**gamma
     term2coef = (p > 1.-cutoff).float()*1 \
@@ -27,7 +32,7 @@ def binary_sigmoid_reduced_focal_loss(logits, targets, gamma, alpha, cutoff):
     return rf_loss
 
 class SigmoidReducedFocalLoss(nn.Module):
-    def __init__(self, gamma, alpha, cutoff):
+    def __init__(self, gamma, alpha, cutoff, norm):
         super(SigmoidReducedFocalLoss, self).__init__()
         if hasattr(gamma, '__getitem__'):
             self.gamma = gamma[0]
@@ -41,10 +46,11 @@ class SigmoidReducedFocalLoss(nn.Module):
             self.cutoff = cutoff[0]
         else:
             self.cutoff = cutoff
+        self.norm = norm
 
     def forward(self, logits, targets, **kwargs):
         # args are ignored
-        loss = sigmoid_reduced_focal_loss(logits, targets.int(), self.gamma, self.alpha, self.cutoff)
+        loss = sigmoid_reduced_focal_loss(logits, targets.int(), self.gamma, self.alpha, self.cutoff, self.norm)
         return loss.sum()
 
     def __repr__(self):
