@@ -32,6 +32,8 @@ class FastRCNNLossComputation(object):
         box_coder, 
         cls_loss,
         cls_agnostic_bbox_reg=False,
+        cls_loss_weight,
+        bbox_loss_weight,
     ):
         """
         Arguments:
@@ -44,6 +46,8 @@ class FastRCNNLossComputation(object):
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
         self.cls_loss = cls_loss
+        self.cls_loss_weight = cls_loss_weight
+        self.bbox_loss_weight = bbox_loss_weight
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -184,7 +188,7 @@ class FastRCNNLossComputation(object):
         )
         box_loss = box_loss / labels.numel()
 
-        return classification_loss, box_loss
+        return self.cls_loss_weight * classification_loss, self.bbox_loss_weight * box_loss
 
 def _cross_entropy_with_kwargs(logits, labels, **kwargs):
     return F.cross_entropy(logits, labels)
@@ -253,6 +257,8 @@ def make_roi_box_loss_evaluator(cfg):
         box_coder, 
         cls_loss,
         cls_agnostic_bbox_reg,
+        cfg.MODEL.ROI_HEADS.CLS_LOSS_WT,
+        cfg.MODEL.ROI_HEADS.BBOX_LOSS_WT,
     )
 
     return loss_evaluator
