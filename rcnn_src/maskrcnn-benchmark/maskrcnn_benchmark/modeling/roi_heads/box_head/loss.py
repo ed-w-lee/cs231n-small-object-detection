@@ -31,9 +31,9 @@ class FastRCNNLossComputation(object):
         fg_bg_sampler, 
         box_coder, 
         cls_loss,
-        cls_agnostic_bbox_reg=False,
         cls_loss_weight,
         bbox_loss_weight,
+        cls_agnostic_bbox_reg=False,
     ):
         """
         Arguments:
@@ -256,9 +256,9 @@ def make_roi_box_loss_evaluator(cfg):
         fg_bg_sampler, 
         box_coder, 
         cls_loss,
-        cls_agnostic_bbox_reg,
         cfg.MODEL.ROI_HEADS.CLS_LOSS_WT,
         cfg.MODEL.ROI_HEADS.BBOX_LOSS_WT,
+        cls_agnostic_bbox_reg,
     )
 
     return loss_evaluator
