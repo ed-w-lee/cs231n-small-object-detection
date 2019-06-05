@@ -27,7 +27,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('-img_size', type=int, default=32 * 51, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -43,7 +43,7 @@ def detect(opt):
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('weights/best.pt')#, map_location='cpu')
+    checkpoint = torch.load('weights/weights_n1024_b25_x100_continuous_smallanchors.pt')#, map_location='cpu')
 
     model.load_state_dict(checkpoint['model'])
     model.to(device).eval()
