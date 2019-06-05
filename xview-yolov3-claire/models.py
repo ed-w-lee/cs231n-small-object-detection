@@ -144,6 +144,7 @@ class YOLOLayer(nn.Module):
             # MSELoss = nn.MSELoss(reduction='sum')  # version 0.4.1
             MSELoss = nn.MSELoss(size_average=False)  # version 0.4.0
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+            CrossEntropyLoss_unreduced = nn.CrossEntropyLoss(weight=weight, reduction='none')
 
             if requestPrecision:
                 gx = self.grid_x[:, :, :nG, :nG]
@@ -168,20 +169,23 @@ class YOLOLayer(nn.Module):
                 # wC /= sum(wC)
                 
                 # Claire added:
-#                 areas = width.cuda() * height.cuda()
-#                 areas = areas[mask]
-# #                 if sum(areas[areas > 250]) > 1: print("Saw area > 250")
-#                 area_coeffs = torch.ones(areas.shape, device=device) * 4
-#                 area_coeffs[areas < 250] = 40
+                AREA_THRESH = 1024
+                BETA = .25
+                
+                areas = width.cuda() * height.cuda()
+                areas = areas[mask]
+#                 area_coeffs = torch.ones(areas.shape, device=device)
+#                 area_coeffs[areas <= AREA_THRESH] = 1
+#                 area_coeffs[areas > AREA_THRESH] = torch.pow(AREA_THRESH / areas[areas > AREA_THRESH], BETA)
+                area_coeffs = torch.pow(AREA_THRESH / areas, BETA)
                 
                 lx = 2 * MSELoss(x[mask], tx[mask])
                 ly = 2 * MSELoss(y[mask], ty[mask])
-                lw = 4 * MSELoss(w[mask], tw[mask]) # area_coeffs.mul((w[mask] - tw[mask]).pow(2)).sum()
-                lh = 4 * MSELoss(h[mask], th[mask]) # area_coeffs.mul((h[mask] - th[mask]).pow(2)).sum()
+                lw = 4 * MSELoss(w[mask], tw[mask]) # area_coeffs.mul((w[mask] - tw[mask]).pow(2)).mean() # 
+                lh = 4 * MSELoss(h[mask], th[mask]) # area_coeffs.mul((h[mask] - th[mask]).pow(2)).mean() # 
                 lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
-
-                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))  # * min(epoch*.01 + 0.125, 1)
-                # lcls = BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
+                lcls = 100 * nM * area_coeffs * CrossEntropyLoss_unreduced(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = lcls.mean()
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
